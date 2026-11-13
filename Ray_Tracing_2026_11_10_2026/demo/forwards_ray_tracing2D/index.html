@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>2D Forward Ray Tracing Simulation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg-color: #08080a;
+      --card-bg: #121214;
+      --card-border: rgba(225, 229, 231, 0.18);
+      --badger-red: #C5050C;
+      --dark-red: #9B0000;
+      --text-main: #FFFFFF;
+      --text-muted: #E1E5E7;
+      --text-dim: #9aa0a6;
+      --accent-green: #2ecc71;
+      --accent-yellow: #f1c40f;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important; /* Strict presentation styling: no rounded corners */
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.35;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      padding: 0;
+      font-size: 1.25rem; /* scales cleanly with browser presentation text settings */
+      user-select: none;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 8px 12px;
+      gap: 6px;
+    }
+
+    /* Top Controls Row */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;    }
+
+    .controls-row-second {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;      border-bottom: 1px solid rgba(225, 229, 231, 0.12);
+      padding-bottom: 6px;
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    .input-group label {
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .num-input {
+      background: #000000;
+      color: var(--text-main);
+      border: 1px solid rgba(225, 229, 231, 0.25);
+      padding: 4px 6px;
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 0.95rem;
+      font-weight: 600;
+      width: 64px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .num-input:focus {
+      border-color: var(--badger-red);
+    }
+
+    .color-picker-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .color-swatch {
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: transform 0.1s, border-color 0.15s;
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.15);
+      border-color: #ffffff;
+    }
+
+    .color-swatch.active {
+      border: 2px solid #ffffff;
+      outline: 2px solid var(--badger-red);
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    button {
+      background: var(--badger-red);
+      color: #fff;
+      border: 1px solid var(--badger-red);
+      padding: 4px 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: background-color 0.15s;
+    }
+
+    button:hover:not(:disabled) {
+      background: #a3040a;
+      border-color: #a3040a;
+    }
+
+    button.btn-secondary {
+      background: rgba(225, 229, 231, 0.1);
+      color: var(--text-muted);
+      border: 1px solid rgba(225, 229, 231, 0.22);
+    }
+
+    button.btn-secondary:hover:not(:disabled) {
+      background: rgba(225, 229, 231, 0.2);
+      color: #fff;
+    }
+
+    /* Sensor Panel - Own Line */
+    .sensor-panel {
+      display: flex;
+      align-items: center;
+      background: #000000;
+      border: 1px solid rgba(225, 229, 231, 0.15);
+      padding: 4px 6px;
+    }
+
+    .sensor-strip-container {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      height: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: #000000;
+      overflow: hidden;
+    }
+
+    .sensor-pixel-cell {
+      flex: 1;
+      height: 100%;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      background: #08080c;
+      transition: background-color 0.05s ease;
+      cursor: help;
+    }
+
+    .sensor-pixel-cell:last-child {
+      border-right: none;
+    }
+
+    .stats-badge {
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 0.92rem;
+      white-space: nowrap;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .stats-badge strong {
+      color: var(--text-main);
+    }
+
+    .stats-badge .hit-highlight {
+      color: var(--accent-green);
+    }
+
+    /* Canvas Wrapper */
+    .canvas-wrapper {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      background: #000000;
+      border: 1px solid rgba(225, 229, 231, 0.16);
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      font-size: 0.82rem;
+      color: rgba(225, 229, 231, 0.7);
+      pointer-events: none;
+      background: rgba(8, 8, 10, 0.85);
+      padding: 3px 8px;
+      border: 1px solid rgba(225, 229, 231, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Top Controls Row 1: Numeric Inputs & Swatches -->
+    <div class="controls-row">
+      <!-- Light rays count -->
+      <div class="input-group">
+        <label for="inputRays">Rays:</label>
+        <input type="number" id="inputRays" class="num-input" value="180" min="0" max="1500" step="1">
+      </div>
+
+      <!-- Spacing between rays -->
+      <div class="input-group">
+        <label for="inputSpacing">Spacing (°):</label>
+        <input type="number" id="inputSpacing" class="num-input" value="2.0" min="0.1" max="90" step="0.5" title="Angular distance between adjacent light rays">
+      </div>
+
+      <!-- Spread angle -->
+      <div class="input-group">
+        <label for="inputSpread">Spread (°):</label>
+        <input type="number" id="inputSpread" class="num-input" value="360" min="10" max="360" step="10" title="Total angular spread of rays from the light source">
+      </div>
+
+      <!-- Bounces -->
+      <div class="input-group">
+        <label for="inputBounces">Max Bounces:</label>
+        <input type="number" id="inputBounces" class="num-input" value="3" min="0" max="10" step="1" title="Number of bounces each ray takes until decaying">
+      </div>
+
+      <!-- Camera Pixels -->
+      <div class="input-group">
+        <label for="inputPixels">Camera Pixels:</label>
+        <input type="number" id="inputPixels" class="num-input" value="20" min="1" max="64" step="1" title="Number of pixel sensor divisions on the camera line">
+      </div>
+
+      <!-- Wall Bounce Toggle -->
+      <div class="input-group" title="When unchecked, rays are absorbed by outer walls and do not bounce">
+        <label for="checkWallBounces" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          <input type="checkbox" id="checkWallBounces" style="cursor: pointer; accent-color: var(--badger-red); width: 14px; height: 14px;">
+          Wall Bounces
+        </label>
+      </div>
+
+      <!-- Barrier Color Selection -->
+      <div class="input-group">
+        <label>Barrier Color:</label>
+        <div class="color-picker-group" id="swatchGroup">
+          <div class="color-swatch active" data-color="#e74c3c" style="background:#e74c3c;" title="Red"></div>
+          <div class="color-swatch" data-color="#2ecc71" style="background:#2ecc71;" title="Green"></div>
+          <div class="color-swatch" data-color="#3498db" style="background:#3498db;" title="Blue"></div>
+          <div class="color-swatch" data-color="#f1c40f" style="background:#f1c40f;" title="Yellow"></div>
+          <div class="color-swatch" data-color="#9b59b6" style="background:#9b59b6;" title="Purple"></div>
+          <div class="color-swatch" data-color="#ffffff" style="background:#ffffff;" title="White/Mirror"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls Row 2: Stats ("Rays that hit sensor:", "Pixels Hit:") and Action Buttons -->
+    <div class="controls-row-second">
+      <!-- Rays hitting sensor -->
+      <div class="stats-badge" id="statsBadge">
+        Rays that hit sensor: <strong class="hit-highlight" id="statHits">0</strong> / <strong id="statTotal">180</strong> (<span id="statPercent">0.0%</span>)
+      </div>
+
+      <!-- Pixels Hit -->
+      <div class="stats-badge" id="pixelsHitBadge">
+        Pixels Hit: <strong class="hit-highlight" id="statPixelsHit">0</strong> / <strong id="statTotalPixels">20</strong> (<span id="statPixelsPercent">0.0%</span>)
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="btn-group">
+        <button id="btnUndoBarrier" class="btn-secondary" title="Undo the last action" disabled>Undo</button>
+        <button id="btnClearBarriers" class="btn-secondary" title="Remove all drawn barriers">Clear</button>
+        <button id="btnResetScene" class="btn-secondary" title="Restore default layout">Reset</button>
+      </div>
+    </div>
+
+    <!-- Sensor Output View: Array of sensors has its own dedicated line -->
+    <div class="sensor-panel">
+      <div class="sensor-strip-container" id="sensorStrip" title="1D Camera sensor pixels"></div>
+    </div>
+
+    <!-- 2D Canvas Area -->
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <canvas id="rayCanvas"></canvas>
+      <div class="canvas-hint">
+        Click &amp; drag on canvas to draw barriers • Drag ☼ Light, 📷 Camera, or ⤾ Rotate handle • Right-click barrier to delete
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="simulation.js"></script>
+</body>
+</html>

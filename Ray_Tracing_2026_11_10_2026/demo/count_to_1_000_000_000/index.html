@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Count to Target Benchmark</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg-color: #121212;
+      --card-bg: #181818;
+      --card-border: rgba(225, 229, 231, 0.18);
+      --badger-red: #C5050C;
+      --dark-red: #9B0000;
+      --text-main: #FFFFFF;
+      --text-muted: #E1E5E7;
+      --text-dim: #8e9599;
+      --accent-green: #2ecc71;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important; /* Strictly no rounded corners anywhere */
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.35;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      padding: 0px 0px;
+      font-size: 1.25em; /* scales smoothly with user's browser base font size */
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      gap: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 10px 14px;
+      /* box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); */
+    }
+
+    /* Top Controls Row */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid rgba(225, 229, 231, 0.1);
+      padding-bottom: 8px;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button {
+      background: var(--badger-red);
+      color: #fff;
+      border: 1px solid var(--badger-red);
+      padding: 6px 14px;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.15s;
+    }
+
+    button:hover:not(:disabled) {
+      background: #a3040a;
+      border-color: #a3040a;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    button.btn-secondary {
+      background: rgba(225, 229, 231, 0.1);
+      color: var(--text-muted);
+      border: 1px solid rgba(225, 229, 231, 0.2);
+    }
+
+    button.btn-secondary:hover:not(:disabled) {
+      background: rgba(225, 229, 231, 0.2);
+      color: #fff;
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95em;
+      color: var(--text-muted);
+    }
+
+    .input-group label {
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    .text-input {
+      background: #0f0f0f;
+      color: var(--text-main);
+      border: 1px solid rgba(225, 229, 231, 0.25);
+      padding: 5px 8px;
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 0.95em;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .text-input:focus {
+      border-color: var(--badger-red);
+    }
+
+    .text-input.input-target {
+      width: 170px;
+    }
+
+    .text-input.input-delay {
+      width: 75px;
+    }
+
+    /* Main Grid: Left Status + Right Code View */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 14px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Left Pane */
+    .counter-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .counter-label {
+      font-size: 0.75em;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+    }
+
+    .counter-value {
+      font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+      font-size: 1.5em;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+      white-space: nowrap;
+    }
+
+    .counter-target {
+      font-size: 1em;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .progress-bar-wrapper {
+      width: 100%;
+      height: 12px; /* Bigger, clearer progress bar for presentation */
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: var(--badger-red);
+      transition: width 0.2s ease;
+    }
+
+    .meta-row {
+      margin-top: auto; /* Aligns Time Elapsed, ETA, and status to bottom of pane */
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-dim);
+      font-size: 0.95em;
+      padding-top: 4px;
+      border-top: 1px solid rgba(225, 229, 231, 0.08);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.75em;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .status-badge.running {
+      background: rgba(197, 5, 12, 0.25);
+      border-color: var(--badger-red);
+      color: #ff6b6b;
+    }
+
+    .status-badge.done {
+      background: rgba(46, 204, 113, 0.15);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    .status-badge.paused {
+      background: rgba(243, 156, 18, 0.15);
+      border-color: #f39c12;
+      color: #f39c12;
+    }
+
+    /* Right Pane: Code Viewer */
+    .code-pane {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: #0d0d0d;
+      border: 1px solid rgba(225, 229, 231, 0.12);
+      padding: 6px 10px;
+    }
+
+    .code-header {
+      font-size: 0.75em;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 3px;
+    }
+
+    .code-header .mode-label {
+      color: var(--text-muted);
+      font-family: ui-monospace, Consolas, monospace;
+    }
+
+    pre.code-block {
+      flex: 1;
+      min-height: 0;
+      margin: 0;
+      padding: 2px 0;
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 0.95em;
+      line-height: 1.4;
+      color: #dcdcdc;
+      overflow: auto;
+      white-space: pre;
+    }
+
+    .keyword { color: #569cd6; }
+    .fn { color: #dcdcaa; }
+    .num { color: #b5cea8; }
+    .comment { color: #6a9955; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Top Controls Row -->
+    <div class="controls-row">
+      <div class="btn-group">
+        <button id="btnStart">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Start Counting
+        </button>
+        <button id="btnReset" class="btn-secondary" disabled>Reset</button>
+      </div>
+
+      <!-- Count to input -->
+      <div class="input-group">
+        <label for="inputTarget">Count to:</label>
+        <input type="text" id="inputTarget" class="text-input input-target" value="1_000_000_000" placeholder="1000000000">
+      </div>
+
+      <!-- Sleep time input -->
+      <div class="input-group">
+        <label for="inputDelay">Delay / Op (ms):</label>
+        <input type="text" id="inputDelay" class="text-input input-delay" value="0" placeholder="0">
+      </div>
+    </div>
+
+    <!-- Main Grid: Status & Code Viewer -->
+    <div class="main-grid">
+      <!-- Left Column: Counter & Status -->
+      <div class="counter-pane">
+        <div>
+          <div class="counter-label">Operation Count</div>
+          <div class="counter-value">
+            <span id="counterNum">0</span>
+            <span id="targetDisplay" class="counter-target">/ 1,000,000,000</span>
+          </div>
+        </div>
+
+        <div class="progress-bar-wrapper">
+          <div id="progressFill" class="progress-bar-fill"></div>
+        </div>
+
+        <div class="meta-row">
+          <div>
+            Time Elapsed: <strong id="elapsedDisplay" style="color: var(--text-main); font-family: ui-monospace, monospace;">0.00s</strong>
+          </div>
+          <div>
+            ETA: <strong id="etaDisplay" style="color: var(--text-main); font-family: ui-monospace, monospace;">--</strong>
+          </div>
+          <div id="statusBadge" class="status-badge">Idle</div>
+        </div>
+      </div>
+
+      <!-- Right Column: Code Display -->
+      <div class="code-pane">
+        <div class="code-header">
+          <span>Active Execution Loop</span>
+          <span id="codeModeLabel" class="mode-label">no sleep</span>
+        </div>
+        <pre id="codeDisplay" class="code-block"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let worker = null;
+    let isRunning = false;
+    let currentCount = 0;
+    let currentElapsedMs = 0;
+    let baseElapsedMs = 0;
+    let runStartTime = 0;
+
+    // DOM Elements
+    const btnStart = document.getElementById('btnStart');
+    const btnReset = document.getElementById('btnReset');
+    const inputTarget = document.getElementById('inputTarget');
+    const inputDelay = document.getElementById('inputDelay');
+    const counterNum = document.getElementById('counterNum');
+    const targetDisplay = document.getElementById('targetDisplay');
+    const progressFill = document.getElementById('progressFill');
+    const elapsedDisplay = document.getElementById('elapsedDisplay');
+    const etaDisplay = document.getElementById('etaDisplay');
+    const statusBadge = document.getElementById('statusBadge');
+    const codeDisplay = document.getElementById('codeDisplay');
+    const codeModeLabel = document.getElementById('codeModeLabel');
+
+    // Format duration in YY:DD:HH:MM:SS.MS format omitting leading 0 sections
+    function formatDuration(ms) {
+      if (!Number.isFinite(ms) || ms < 0) ms = 0;
+      const MS_PER_SEC = 1000;
+      const MS_PER_MIN = 60 * MS_PER_SEC;
+      const MS_PER_HOUR = 60 * MS_PER_MIN;
+      const MS_PER_DAY = 24 * MS_PER_HOUR;
+      const MS_PER_YEAR = 365 * MS_PER_DAY;
+
+      const years = Math.floor(ms / MS_PER_YEAR);
+      ms -= years * MS_PER_YEAR;
+
+      const days = Math.floor(ms / MS_PER_DAY);
+      ms -= days * MS_PER_DAY;
+
+      const hours = Math.floor(ms / MS_PER_HOUR);
+      ms -= hours * MS_PER_HOUR;
+
+      const minutes = Math.floor(ms / MS_PER_MIN);
+      ms -= minutes * MS_PER_MIN;
+
+      const seconds = Math.floor(ms / MS_PER_SEC);
+      ms -= seconds * MS_PER_SEC;
+
+      const hundredths = Math.floor(ms / 10);
+      const pad2 = (n) => String(n).padStart(2, '0');
+      const secPart = pad2(seconds) + '.' + pad2(hundredths);
+
+      if (years > 0) {
+        return years + 'y:' + pad2(days) + ':' + pad2(hours) + ':' + pad2(minutes) + ':' + secPart;
+      }
+      if (days > 0) {
+        return days + 'd:' + pad2(hours) + ':' + pad2(minutes) + ':' + secPart;
+      }
+      if (hours > 0) {
+        return hours + 'h:' + pad2(minutes) + ':' + secPart;
+      }
+      if (minutes > 0) {
+        return minutes + 'm:' + secPart;
+      }
+      return seconds + '.' + pad2(hundredths) + 's';
+    }
+
+    // Calculate remaining ETA based on active progress ignoring pause durations
+    function calculateEta(count, target, elapsedMs) {
+      if (!count || count <= 0 || elapsedMs <= 0) {
+        return '--';
+      }
+      if (count >= target) {
+        return formatDuration(0);
+      }
+      const msPerOp = elapsedMs / count;
+      const remainingOps = target - count;
+      const remainingMs = remainingOps * msPerOp;
+      return formatDuration(remainingMs);
+    }
+
+    // Parse numeric inputs allowing underscores (e.g. 1_000_000_000) or commas
+    function parseNumber(str, defaultValue) {
+      if (str === null || str === undefined) return defaultValue;
+      const clean = String(str).replace(/[_\s,]/g, '');
+      if (clean === '') return defaultValue;
+      const val = Number(clean);
+      return Number.isFinite(val) ? val : defaultValue;
+    }
+
+    function formatNumber(num) {
+      return Number(num).toLocaleString('en-US');
+    }
+
+    function getTarget() {
+      const val = parseNumber(inputTarget.value, 1_000_000_000);
+      return Math.max(1, Math.floor(val));
+    }
+
+    function getDelay() {
+      const val = parseNumber(inputDelay.value, 0);
+      return Math.max(0, val);
+    }
+
+    // Update code snippet display dynamically based on sleep value
+    function updateCodeView() {
+      const delay = getDelay();
+      const target = getTarget();
+      const formattedTarget = target.toLocaleString('en-US');
+      const underscoreFormattedTarget = formattedTarget.replaceAll(',','_')
+
+      if (delay <= 0) {
+        codeModeLabel.textContent = 'no sleep (0 ms)';
+        codeDisplay.innerHTML =
+// `<span class="comment">// Loop with only addition</span>
+// <span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="num">1</span>; i &lt;= <span class="num">${formattedTarget}</span>; i++) {
+// }`.trim()
+
+`
+<span class="comment">// Addition loop</span>
+<span class="keyword">let</span> i = <span class="num">0</span>;
+<span class="keyword">while</span> (i &lt; <span class="num">${underscoreFormattedTarget}</span>) {
+    i += <span class="num">1</span>;
+}
+`.trim();
+      } else {
+        codeModeLabel.textContent = `sleep(${delay} ms)`;
+        codeDisplay.innerHTML =
+// `<span class="comment">// Loop with sleep per operation</span>
+// <span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="num">1</span>; i &lt;= <span class="num">${formattedTarget}</span>; i++) {
+//     <span class="keyword">await</span> <span class="fn">sleep</span>(<span class="num">${delay}</span>);
+//     <span class="comment">/* execute operation */</span>
+// }`;
+`
+<span class="comment">// Addition loop with work</span>
+<span class="keyword">let</span> i = <span class="num">0</span>;
+<span class="keyword">while</span> (i &lt; <span class="num">${underscoreFormattedTarget}</span>) {
+    <span class="fn">sleep</span>(<span class="num">${delay}</span>); <span class="comment">// Sleep representing some kind of work</span>
+    i += <span class="num">1</span>;
+}
+`.trim();
+      }
+      targetDisplay.textContent = `/ ${formattedTarget}`;
+    }
+
+    inputTarget.addEventListener('input', updateCodeView);
+    inputDelay.addEventListener('input', updateCodeView);
+    updateCodeView();
+
+    function startCounting() {
+      if (isRunning) return;
+
+      const target = getTarget();
+      const delay = getDelay();
+
+      // If previous run reached target, start fresh from 0
+      if (currentCount >= target) {
+        currentCount = 0;
+        currentElapsedMs = 0;
+        baseElapsedMs = 0;
+        counterNum.textContent = '0';
+        progressFill.style.width = '0%';
+        elapsedDisplay.textContent = formatDuration(0);
+        etaDisplay.textContent = '--';
+      } else {
+        baseElapsedMs = currentElapsedMs;
+      }
+
+      isRunning = true;
+      runStartTime = performance.now();
+
+      btnStart.disabled = false;
+      btnStart.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg> Stop Counting`;
+      btnReset.disabled = false;
+      inputTarget.disabled = true;
+      inputDelay.disabled = true;
+      statusBadge.textContent = 'Counting';
+      statusBadge.className = 'status-badge running';
+
+      worker = new Worker('worker.js');
+
+      worker.onmessage = function (e) {
+        const data = e.data;
+        if (!data) return;
+
+        if (data.type === 'start') {
+          currentCount = data.count || 0;
+          currentElapsedMs = data.elapsedMs || 0;
+          counterNum.textContent = formatNumber(currentCount);
+          const percent = Math.min(100, ((currentCount / target) * 100)).toFixed(1);
+          progressFill.style.width = `${percent}%`;
+          elapsedDisplay.textContent = formatDuration(currentElapsedMs);
+          etaDisplay.textContent = calculateEta(currentCount, target, currentElapsedMs);
+        } else if (data.type === 'progress') {
+          currentCount = data.count;
+          currentElapsedMs = data.elapsedMs;
+          counterNum.textContent = formatNumber(data.count);
+          const percent = Math.min(100, ((data.count / data.target) * 100)).toFixed(1);
+          progressFill.style.width = `${percent}%`;
+          elapsedDisplay.textContent = formatDuration(data.elapsedMs);
+          etaDisplay.textContent = calculateEta(data.count, data.target, data.elapsedMs);
+        } else if (data.type === 'done') {
+          currentCount = data.target;
+          currentElapsedMs = data.elapsedMs;
+          counterNum.textContent = formatNumber(data.target);
+          progressFill.style.width = '100%';
+          elapsedDisplay.textContent = formatDuration(data.elapsedMs);
+          etaDisplay.textContent = formatDuration(0);
+
+          statusBadge.textContent = 'Completed';
+          statusBadge.className = 'status-badge done';
+          btnStart.disabled = false;
+          btnStart.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Count Again`;
+          inputTarget.disabled = false;
+          inputDelay.disabled = false;
+          isRunning = false;
+
+          worker.terminate();
+          worker = null;
+        }
+      };
+
+      worker.onerror = function (err) {
+        console.error('Worker error:', err);
+        stopCounting();
+      };
+
+      worker.postMessage({
+        action: 'start',
+        startCount: currentCount,
+        targetCount: target,
+        delayMs: delay,
+        initialElapsedMs: baseElapsedMs
+      });
+    }
+
+    function stopCounting() {
+      if (!isRunning) return;
+      isRunning = false;
+
+      if (worker) {
+        worker.postMessage({ action: 'stop' });
+        worker.terminate();
+        worker = null;
+      }
+
+      // Compute exact elapsed time at moment of stopping
+      const stopDuration = performance.now() - runStartTime;
+      currentElapsedMs = baseElapsedMs + stopDuration;
+      elapsedDisplay.textContent = formatDuration(currentElapsedMs);
+      etaDisplay.textContent = calculateEta(currentCount, getTarget(), currentElapsedMs);
+
+      statusBadge.textContent = 'Paused';
+      statusBadge.className = 'status-badge paused';
+      btnStart.disabled = false;
+      btnStart.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Count Again`;
+      btnReset.disabled = false;
+      inputTarget.disabled = false;
+      inputDelay.disabled = false;
+    }
+
+    function onStartBtnClick() {
+      if (isRunning) {
+        stopCounting();
+      } else {
+        startCounting();
+      }
+    }
+
+    function resetState() {
+      if (worker) {
+        worker.terminate();
+        worker = null;
+      }
+      isRunning = false;
+      currentCount = 0;
+      currentElapsedMs = 0;
+      baseElapsedMs = 0;
+
+      btnStart.disabled = false;
+      btnStart.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Start Counting`;
+      btnReset.disabled = true;
+      inputTarget.disabled = false;
+      inputDelay.disabled = false;
+      counterNum.textContent = '0';
+      progressFill.style.width = '0%';
+      elapsedDisplay.textContent = formatDuration(0);
+      etaDisplay.textContent = '--';
+      statusBadge.textContent = 'Idle';
+      statusBadge.className = 'status-badge';
+      updateCodeView();
+    }
+
+    btnStart.addEventListener('click', onStartBtnClick);
+    btnReset.addEventListener('click', resetState);
+  </script>
+</body>
+</html>
+

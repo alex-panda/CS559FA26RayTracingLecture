@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Whitted Ray Tracer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../../css/custom.css">
+  <style>
+    :root {
+      --uw-black: #121212;
+      --uw-dark-red: #9B0000;
+      --uw-badger-red: #C5050C;
+      --uw-white: #FFFFFF;
+      --uw-light-gray: #E1E5E7;
+      --surface-card-color: #181818;
+      --surface-media-color: #0d0d0d;
+      --border-subtle-color: rgba(225, 229, 231, 0.2);
+      --accent-primary-color: #C5050C;
+      --accent-secondary-color: #9B0000;
+      --text-primary-color: #FFFFFF;
+      --text-muted-color: #E1E5E7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--uw-black);
+      color: var(--text-primary-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.35;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      justify-content: center;
+      gap: 16px;
+      height: 100%;
+      width: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      background: var(--surface-card-color);
+      border: 1px solid var(--border-subtle-color);
+    }
+
+    .demo-canvas-wrap {
+      flex: 2 1 380px;
+      min-width: 200px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      background: var(--surface-media-color);
+      border: 1px solid var(--border-subtle-color);
+      overflow: hidden;
+    }
+
+    .demo-canvas, .demo-img-placeholder {
+      width: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      height: auto;
+      object-fit: contain;
+      aspect-ratio: 16 / 9;
+      border: none;
+      display: block;
+      box-sizing: border-box;
+    }
+
+    .demo-stats-panel {
+      flex: 1 1 240px;
+      min-width: 200px;
+      max-width: 320px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border-subtle-color);
+      padding: 12px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    .demo-controls {
+      display: flex;
+      width: 100%;
+    }
+
+    .demo-btn {
+      width: 100%;
+      background: var(--accent-primary-color);
+      color: var(--text-primary-color);
+      border: 1px solid var(--accent-primary-color);
+      padding: 8px 14px;
+      font-size: 0.9em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s;
+      text-align: center;
+    }
+
+    .demo-btn:hover:not(:disabled) {
+      background: var(--accent-secondary-color);
+      border-color: var(--accent-secondary-color);
+    }
+
+    .demo-stats-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+      font-size: 0.78em;
+      font-family: monospace;
+    }
+
+    .demo-stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 4px 0;
+    }
+
+    .demo-stat-label {
+      color: var(--text-muted-color);
+      font-weight: 500;
+    }
+
+    .demo-stat-value {
+      color: var(--text-primary-color);
+      font-weight: 600;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .demo-status {
+      min-height: 1.2em;
+    }
+
+    @media (max-width: 580px) {
+      .container {
+        flex-direction: column;
+      }
+      .demo-canvas-wrap, .demo-stats-panel {
+        width: 100%;
+        max-width: 100%;
+        flex: 1 1 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container demo-card">
+    <div class="demo-canvas-wrap" id="canvasWrap">
+      <!-- Canvas or Snapshot will be mounted here by frontend.js -->
+    </div>
+
+    <div class="demo-stats-panel">
+      <div class="demo-controls">
+        <button class="demo-btn" id="renderBtn">▶ Run Live Render</button>
+      </div>
+
+      <div class="demo-stats-grid">
+        <div class="demo-stat-row">
+          <span class="demo-stat-label">Status</span>
+          <span class="demo-stat-value demo-status" id="statusVal">Ready to trace rays</span>
+        </div>
+        <div class="demo-stat-row">
+          <span class="demo-stat-label">Canvas Size</span>
+          <span class="demo-stat-value demo-stat-size" id="sizeVal">400 × 225 px</span>
+        </div>
+        <div class="demo-stat-row">
+          <span class="demo-stat-label">Rays Traced</span>
+          <span class="demo-stat-value demo-stat-rays" id="raysVal">0</span>
+        </div>
+        <div class="demo-stat-row" id="shadowRaysRow" style="display: none;">
+          <span class="demo-stat-label">Shadow Rays</span>
+          <span class="demo-stat-value demo-stat-shadow" id="shadowRaysVal">--</span>
+        </div>
+        <div class="demo-stat-row">
+          <span class="demo-stat-label">Pixels Drawn</span>
+          <span class="demo-stat-value demo-stat-pixels" id="pixelsVal">0 / 90,000 (0%)</span>
+        </div>
+        <div class="demo-stat-row">
+          <span class="demo-stat-label">Time Taken</span>
+          <span class="demo-stat-value demo-stat-time" id="timeVal">0.0s</span>
+        </div>
+        <div class="demo-stat-row" id="etaRow">
+          <span class="demo-stat-label">ETA</span>
+          <span class="demo-stat-value demo-stat-eta" id="etaVal">--</span>
+        </div>
+        <div class="demo-stat-row">
+          <span class="demo-stat-label">Max AA Subdivs</span>
+          <span class="demo-stat-value demo-stat-spp" id="aaSubdivsVal">Unlimited</span>
+        </div>
+        <div class="demo-stat-row" id="aaSubdivsOccurredRow">
+          <span class="demo-stat-label">AA Subdivs</span>
+          <span class="demo-stat-value demo-stat-aa" id="aaSubdivsOccurredVal">0</span>
+        </div>
+        <div class="demo-stat-row">
+          <span class="demo-stat-label">Ray Rate</span>
+          <span class="demo-stat-value demo-stat-rate" id="rateVal">--</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="frontend.js"></script>
+</body>
+</html>

@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>2D Backward Ray Tracing Simulation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg-color: #08080a;
+      --card-bg: #121214;
+      --card-border: rgba(225, 229, 231, 0.18);
+      --badger-red: #C5050C;
+      --dark-red: #9B0000;
+      --text-main: #FFFFFF;
+      --text-muted: #E1E5E7;
+      --text-dim: #9aa0a6;
+      --accent-green: #2ecc71;
+      --accent-yellow: #f1c40f;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important; /* Strict presentation styling: no rounded corners */
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.35;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      padding: 0;
+      font-size: 1.25rem; /* scales cleanly with browser presentation text settings */
+      user-select: none;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 8px 12px;
+      gap: 6px;
+    }
+
+    /* Top Controls Row */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Collapsible Settings Drawer */
+    .settings-drawer {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(225, 229, 231, 0.15);
+      padding: 8px 10px;
+    }
+
+    .settings-drawer.open {
+      display: flex;
+    }
+
+    .btn-toggle-menu {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(225, 229, 231, 0.12);
+      color: var(--text-main);
+      border: 1px solid rgba(225, 229, 231, 0.28);
+      padding: 4px 9px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .btn-toggle-menu:hover {
+      background: rgba(225, 229, 231, 0.22);
+      border-color: #ffffff;
+    }
+
+    .btn-toggle-menu .toggle-chevron {
+      display: inline-block;
+      transition: transform 0.2s ease;
+      font-size: 0.72rem;
+    }
+
+    .btn-toggle-menu.open .toggle-chevron {
+      transform: rotate(90deg);
+    }
+
+    /* Extra Camera Lens Controls Row */
+    .controls-row-lens {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: rgba(46, 204, 113, 0.08);
+      border: 1px dashed rgba(46, 204, 113, 0.4);
+      padding: 4px 8px;
+      font-size: 0.95rem;
+    }
+
+    .lens-badge {
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--accent-green);
+    }
+
+    .lens-hint {
+      font-size: 0.8rem;
+      color: rgba(225, 229, 231, 0.75);
+      margin-left: auto;
+      font-style: italic;
+    }
+
+    .controls-row-second {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid rgba(225, 229, 231, 0.12);
+      padding-bottom: 6px;
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    .input-group label {
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .num-input {
+      background: #000000;
+      color: var(--text-main);
+      border: 1px solid rgba(225, 229, 231, 0.25);
+      padding: 4px 6px;
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 0.95rem;
+      font-weight: 600;
+      width: 64px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .num-input:focus {
+      border-color: var(--badger-red);
+    }
+
+    .select-input {
+      background: #000000;
+      color: var(--text-main);
+      border: 1px solid rgba(225, 229, 231, 0.25);
+      padding: 4px 6px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .select-input:focus {
+      border-color: var(--badger-red);
+    }
+
+    .btn-color-picker {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #000000;
+      color: var(--text-main);
+      border: 1px solid rgba(225, 229, 231, 0.28);
+      padding: 3px 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+
+    .btn-color-picker:hover {
+      border-color: var(--badger-red);
+      background: rgba(225, 229, 231, 0.08);
+    }
+
+    .color-swatch-preview {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+      flex-shrink: 0;
+    }
+
+    /* Correctly-Themed Color Picker Popover for Presentations */
+    .color-picker-popover {
+      position: absolute;
+      z-index: 2000;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 10px;
+      width: 250px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9);
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .popover-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(225, 229, 231, 0.15);
+      padding-bottom: 6px;
+    }
+
+    .popover-header span {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-main);
+    }
+
+    .popover-palette {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+    }
+
+    .popover-swatch {
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      transition: transform 0.1s, border-color 0.15s;
+    }
+
+    .popover-swatch:hover {
+      transform: scale(1.12);
+      border-color: #ffffff;
+      z-index: 2;
+    }
+
+    .popover-swatch.active {
+      outline: 2px solid var(--badger-red);
+      border-color: #ffffff;
+    }
+
+    .popover-custom-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(225, 229, 231, 0.12);
+    }
+
+    .popover-preview-box {
+      width: 24px;
+      height: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      flex-shrink: 0;
+    }
+
+    .color-picker-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .color-swatch {
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: transform 0.1s, border-color 0.15s;
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.15);
+      border-color: #ffffff;
+    }
+
+    .color-swatch.active {
+      border: 2px solid #ffffff;
+      outline: 2px solid var(--badger-red);
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    button {
+      background: var(--badger-red);
+      color: #fff;
+      border: 1px solid var(--badger-red);
+      padding: 4px 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: background-color 0.15s;
+    }
+
+    button:hover:not(:disabled) {
+      background: #a3040a;
+      border-color: #a3040a;
+    }
+
+    button.btn-secondary {
+      background: rgba(225, 229, 231, 0.1);
+      color: var(--text-muted);
+      border: 1px solid rgba(225, 229, 231, 0.22);
+    }
+
+    button.btn-secondary:hover:not(:disabled) {
+      background: rgba(225, 229, 231, 0.2);
+      color: #fff;
+    }
+
+    /* Sensor Panel - Own Line */
+    .sensor-panel {
+      display: flex;
+      align-items: center;
+      background: #000000;
+      border: 1px solid rgba(225, 229, 231, 0.15);
+      padding: 4px 6px;
+    }
+
+    .sensor-strip-container {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      height: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: #000000;
+      overflow: hidden;
+    }
+
+    .sensor-pixel-cell {
+      flex: 1;
+      height: 100%;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      background: #000000;
+      transition: background-color 0.05s ease;
+      cursor: help;
+    }
+
+    .sensor-pixel-cell:last-child {
+      border-right: none;
+    }
+
+    .stats-badge {
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 0.92rem;
+      white-space: nowrap;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .stats-badge strong {
+      color: var(--text-main);
+    }
+
+    .stats-badge .hit-highlight {
+      color: var(--accent-green);
+    }
+
+    /* Canvas Wrapper */
+    .canvas-wrapper {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      background: #000000;
+      border: 1px solid rgba(225, 229, 231, 0.16);
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      font-size: 0.82rem;
+      color: rgba(225, 229, 231, 0.7);
+      pointer-events: none;
+      background: rgba(8, 8, 10, 0.85);
+      padding: 3px 8px;
+      border: 1px solid rgba(225, 229, 231, 0.15);
+    }
+
+    /* Modal Popup Styling */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      width: 90%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(225, 229, 231, 0.12);
+      padding-bottom: 8px;
+    }
+
+    .modal-header h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .btn-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      line-height: 1;
+      padding: 0 4px;
+      cursor: pointer;
+    }
+
+    .btn-close:hover {
+      color: var(--badger-red);
+      background: transparent;
+    }
+
+    .scene-textarea {
+      width: 100%;
+      height: 110px;
+      background: #000000;
+      color: var(--text-main);
+      border: 1px solid rgba(225, 229, 231, 0.25);
+      padding: 8px;
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 0.85rem;
+      resize: vertical;
+      outline: none;
+    }
+
+    .scene-textarea:focus {
+      border-color: var(--badger-red);
+    }
+
+    .modal-error {
+      color: #e74c3c;
+      font-size: 0.85rem;
+      margin-top: 6px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top: 1px solid rgba(225, 229, 231, 0.12);
+      padding-top: 10px;
+    }
+
+    /* Color picker opacity row */
+    .popover-opacity-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(225, 229, 231, 0.12);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .popover-opacity-row label {
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+    .popover-opacity-row input[type="range"] {
+      flex: 1;
+      height: 4px;
+      accent-color: var(--badger-red);
+      cursor: pointer;
+    }
+    .popover-opacity-row .opacity-val-badge {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.76rem;
+      color: #fff;
+      width: 32px;
+      text-align: right;
+    }
+
+    /* Pixel Math Hover Popup */
+    .pixel-math-popup {
+      position: fixed;
+      z-index: 3000;
+      background: rgba(14, 14, 18, 0.96);
+      border: 1px solid rgba(225, 229, 231, 0.28);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.92);
+      padding: 10px 14px;
+      width: 480px;
+      max-width: 94vw;
+      color: var(--text-main);
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      transition: opacity 0.12s ease;
+    }
+
+    .pixel-math-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(225, 229, 231, 0.16);
+      padding-bottom: 6px;
+    }
+
+    .pixel-math-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--text-main);
+    }
+
+    .pixel-color-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .pixel-chip-swatch {
+      width: 14px;
+      height: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .pixel-math-section-title {
+      font-size: 0.73rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      margin-top: 2px;
+      margin-bottom: 3px;
+    }
+
+    .pixel-math-variables {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      max-height: 130px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .pixel-var-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      line-height: 1.25;
+    }
+
+    .pixel-var-tag {
+      font-family: ui-monospace, Consolas, monospace;
+      font-weight: 700;
+      color: var(--accent-yellow);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .pixel-var-swatch {
+      width: 10px;
+      height: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      display: inline-block;
+    }
+
+    .pixel-var-desc {
+      color: var(--text-muted);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pixel-math-equation-box {
+      background: #000000;
+      border: 1px solid rgba(225, 229, 231, 0.18);
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .pixel-math-equation {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.8rem;
+      color: #fff;
+      word-break: normal;
+      overflow-wrap: break-word;
+      line-height: 1.35;
+    }
+
+    .pixel-math-eval {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.76rem;
+      color: var(--accent-green);
+      line-height: 1.2;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Main Top Row: Stats, Actions, and Right-most Dropdown Toggle -->
+    <div class="controls-row-second" style="border-bottom: none; padding-bottom: 0;">
+      <!-- Rays reaching light -->
+      <div class="stats-badge" id="statsBadge">
+        Rays Reaching Light: <strong class="hit-highlight" id="statHits">0</strong> / <strong id="statTotal">20</strong> (<span id="statPercent">0.0%</span>)
+      </div>
+
+      <!-- Pixels Lit -->
+      <div class="stats-badge" id="pixelsHitBadge">
+        Pixels Lit: <strong class="hit-highlight" id="statPixelsHit">0</strong> / <strong id="statTotalPixels">20</strong> (<span id="statPixelsPercent">0.0%</span>)
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="btn-group">
+        <button id="btnUndoBarrier" class="btn-secondary" title="Undo the last action" disabled>Undo</button>
+        <button id="btnClearBarriers" class="btn-secondary" title="Remove all drawn barriers">Clear</button>
+        <button id="btnResetScene" class="btn-secondary" title="Restore default layout">Reset</button>
+        <button id="btnCopyLink" class="btn-secondary" title="Copy shareable link with current scene setup to clipboard">Copy Link</button>
+        <button id="btnLoadScene" class="btn-secondary" title="Open popup to paste a query string or scene link">Load Scene</button>
+        <!-- Right-most Dropdown Toggle Button -->
+        <button id="btnToggleMenu" class="btn-toggle-menu" type="button" title="Toggle detailed simulation settings">
+          <span>Settings</span>
+          <span class="toggle-chevron">⮞</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Collapsible Settings Drawer (hidden by default) -->
+    <div id="settingsDrawer" class="settings-drawer">
+      <div class="controls-row">
+        <!-- Camera Pixels -->
+        <div class="input-group">
+          <label for="inputPixels">Camera Pixels:</label>
+          <input type="number" id="inputPixels" class="num-input" value="20" min="1" max="64" step="1" title="Number of pixel sensor divisions on the camera line">
+        </div>
+
+        <!-- Antialiasing Toggle & Max Subdivisions -->
+        <div class="input-group" title="Toggle Whitted 4-corner adaptive subdivision antialiasing">
+          <label for="checkAntialiasing" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+            <input type="checkbox" id="checkAntialiasing" checked style="cursor: pointer; accent-color: var(--badger-red); width: 14px; height: 14px;">
+            Antialiasing
+          </label>
+        </div>
+
+        <!-- Max Antialiasing Subdivisions (Whitted 1980 Adaptive AA) -->
+        <div class="input-group" id="groupMaxAaSubdivisions" title="Maximum times a pixel can recursively subdivide during Whitted's adaptive antialiasing (leave blank for unlimited)">
+          <label for="inputMaxAaSubdivisions">Max AA Subdivs:</label>
+          <input type="number" id="inputMaxAaSubdivisions" class="num-input" value="" min="0" max="10" step="1" placeholder="None" title="Max subdivision depth (leave blank for unlimited)">
+        </div>
+
+        <!-- Bounces -->
+        <div class="input-group">
+          <label for="inputBounces">Max Bounces:</label>
+          <input type="number" id="inputBounces" class="num-input" value="3" min="0" max="10" step="1" title="Number of bounces each ray takes until decaying">
+        </div>
+
+        <!-- Field of View (FOV) -->
+        <div class="input-group">
+          <label for="inputFov">FOV (°):</label>
+          <input type="number" id="inputFov" class="num-input" value="60" min="15" max="140" step="5" title="Camera Field of View in degrees">
+        </div>
+
+        <!-- Shadow Rays Toggle -->
+        <div class="input-group" title="Test direct line of sight from hit points to light source (shadow rays)">
+          <label for="checkShadowRays" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+            <input type="checkbox" id="checkShadowRays" checked style="cursor: pointer; accent-color: var(--badger-red); width: 14px; height: 14px;">
+            Shadow Rays
+          </label>
+        </div>
+
+        <!-- Ambient Color Toggle & Swatch Button -->
+        <div class="input-group" title="Toggle ambient light added to surface illumination">
+          <label for="checkAmbient" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+            <input type="checkbox" id="checkAmbient" style="cursor: pointer; accent-color: var(--badger-red); width: 14px; height: 14px;">
+            Ambient
+          </label>
+          <button type="button" id="btnAmbientColor" class="btn-color-picker" title="Click to choose ambient color">
+            <span class="color-swatch-preview" id="ambientColorSwatch" style="background-color: #404040;"></span>
+            <span>Color</span>
+          </button>
+        </div>
+
+        <!-- No-Hit / Void Color Swatch Button -->
+        <div class="input-group" title="Color when a ray does not hit anything and hits no light">
+          <label>No-Hit:</label>
+          <button type="button" id="btnNoLightColor" class="btn-color-picker" title="Click to choose no-hit / background color">
+            <span class="color-swatch-preview" id="noLightColorSwatch" style="background-color: #000000;"></span>
+            <span>Color</span>
+          </button>
+        </div>
+
+        <!-- Light Color Button -->
+        <div class="input-group" title="Color of the light source you are about to create">
+          <button type="button" id="btnLightColor" class="btn-color-picker" title="Click to choose color of the light to create">
+            <span class="color-swatch-preview" id="lightColorSwatch" style="background-color: #fffad7;"></span>
+            <span>Light Color</span>
+          </button>
+        </div>
+
+        <!-- Add Light Button -->
+        <div class="input-group">
+          <button id="btnAddLight" class="btn-secondary" title="Add another light source to the scene">+ Light</button>
+        </div>
+
+        <!-- Shape Selector: Rectangle or Sphere/Circle -->
+        <div class="input-group" title="Shape tool: Box/Rectangle or Sphere">
+          <label for="selectShape">Shape:</label>
+          <select id="selectShape" class="select-input" title="Choose barrier shape to draw">
+            <option value="rectangle" selected>Rectangle</option>
+            <option value="sphere">Sphere</option>
+          </select>
+        </div>
+
+        <!-- Barrier / Rectangle Width (Thickness) -->
+        <div class="input-group" id="groupBarrierWidth" title="Thickness/width of rectangular barriers">
+          <label for="inputBarrierWidth">Width:</label>
+          <input type="number" id="inputBarrierWidth" class="num-input" value="16" min="2" max="100" step="2" title="Width/thickness in pixels">
+        </div>
+
+        <!-- Material Struct Inputs -->
+        <!-- 1. Ambient Reflection Color [r, g, b] -->
+        <div class="input-group" title="Material ambient reflection color">
+          <label>Mat Ambient:</label>
+          <button type="button" id="btnMatAmbient" class="btn-color-picker" title="Click to choose material ambient reflection color">
+            <span class="color-swatch-preview" id="matAmbientSwatch" style="background-color: #1a1a1a;"></span>
+            <span>Color</span>
+          </button>
+        </div>
+
+        <!-- 2. Diffuse Reflection Color [r, g, b] -->
+        <div class="input-group" title="Material diffuse reflection color (albedo)">
+          <label>Mat Diffuse:</label>
+          <button type="button" id="btnMatDiffuse" class="btn-color-picker" title="Click to choose material diffuse reflection color">
+            <span class="color-swatch-preview" id="matDiffuseSwatch" style="background-color: #e74c3c;"></span>
+            <span>Color</span>
+          </button>
+        </div>
+
+        <!-- 3. Specular Reflection Color [r, g, b] -->
+        <div class="input-group" title="Material specular reflection color">
+          <label>Mat Specular:</label>
+          <button type="button" id="btnMatSpecular" class="btn-color-picker" title="Click to choose material specular reflection color">
+            <span class="color-swatch-preview" id="matSpecularSwatch" style="background-color: #808080;"></span>
+            <span>Color</span>
+          </button>
+        </div>
+
+        <!-- 4. Shininess -->
+        <div class="input-group" title="Specular highlight shininess exponent">
+          <label for="inputMatShininess">Shininess:</label>
+          <input type="number" id="inputMatShininess" class="num-input" value="32" min="0" max="256" step="1" title="Specular highlight exponent">
+        </div>
+
+        <!-- 5. Reflectivity -->
+        <div class="input-group" title="Mirror reflection factor k_s [0, 1]">
+          <label for="inputMatReflectivity">Reflectivity:</label>
+          <input type="number" id="inputMatReflectivity" class="num-input" value="0.0" min="0" max="1" step="0.05" title="Mirror reflection strength (0.0 to 1.0)">
+        </div>
+
+        <!-- 6. Transparency -->
+        <div class="input-group" title="Transmission strength k_t [0, 1]">
+          <label for="inputMatTransparency">Transparency:</label>
+          <input type="number" id="inputMatTransparency" class="num-input" value="0.0" min="0" max="1" step="0.05" title="Transmission strength (0.0 to 1.0)">
+        </div>
+
+        <!-- 7. Refraction Index (eta) -->
+        <div class="input-group" title="Refraction index eta (1.0 = air, 1.33 = water, 1.5 = glass, 2.42 = diamond)">
+          <label for="inputMatRefractiveIndex">Refract Index (η):</label>
+          <input type="number" id="inputMatRefractiveIndex" class="num-input" value="1.5" min="1.0" max="3.0" step="0.05" title="Index of refraction eta">
+        </div>
+      </div>
+    </div>
+
+    <!-- Sensor Output View: Array of sensors has its own dedicated line -->
+    <div class="sensor-panel">
+      <div class="sensor-strip-container" id="sensorStrip"></div>
+    </div>
+
+    <!-- 2D Canvas Area -->
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <canvas id="rayCanvas"></canvas>
+      <div class="canvas-hint">
+        Click &amp; drag to draw barriers • Drag endpoints to reshape • Drag ☼ Light, 👁 Eye, or 🎯 Viewport / LookAt • Right-click to delete
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Popup for Loading Scene from Query String / URL / JSON -->
+  <div id="loadSceneModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Load Scene</h3>
+        <button id="btnCloseModal" class="btn-close" title="Close dialog">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 8px;">
+          Paste a full link, query string (e.g. <code>?scene=...</code>), or scene JSON:
+        </p>
+        <textarea id="txtSceneInput" class="scene-textarea" placeholder="Paste link, query string, or scene JSON here..."></textarea>
+        <div id="loadErrorMsg" class="modal-error" style="display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnCancelModal" class="btn-secondary">Cancel</button>
+        <button id="btnApplyScene">Load</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Correctly-Themed Color Picker Popover for Presentations -->
+  <div id="themedColorPicker" class="color-picker-popover" style="display: none;">
+    <div class="popover-header">
+      <span id="colorPickerTitle">Choose Color</span>
+      <button type="button" class="btn-close" id="btnCloseColorPicker" title="Close" style="font-size: 1.1rem; line-height: 1;">&times;</button>
+    </div>
+    <div class="popover-palette" id="colorPickerPalette"></div>
+    <div class="popover-custom-row">
+      <div class="popover-preview-box" id="colorPickerPreview" style="background: #e74c3c;"></div>
+      <input type="text" id="colorPickerHexInput" class="num-input" style="width: 80px; text-transform: uppercase;" value="#E74C3C" maxlength="7">
+      <input type="color" id="nativeColorInput" style="display: none;">
+      <button type="button" class="btn-secondary" id="btnCustomColorWheel" style="padding: 2px 7px; font-size: 0.8rem;" title="Custom spectrum">More...</button>
+      <button type="button" id="btnApplyColorPicker" style="padding: 2px 8px; font-size: 0.8rem;">Apply</button>
+    </div>
+  </div>
+
+  <!-- Stylized Pixel Math Equation Hover Popup -->
+  <div id="pixelMathPopup" class="pixel-math-popup" style="display: none;">
+    <div class="pixel-math-header">
+      <span class="pixel-math-title" id="mathPopupTitle">Pixel #1 Color</span>
+      <div class="pixel-color-chip">
+        <span class="pixel-chip-swatch" id="mathPopupSwatch"></span>
+        <span id="mathPopupRgbVal">rgb(0, 0, 0)</span>
+      </div>
+    </div>
+    <div class="pixel-math-section-title">Color Variables</div>
+    <div class="pixel-math-variables" id="mathPopupVariables"></div>
+    <div class="pixel-math-section-title">Lighting Equation</div>
+    <div class="pixel-math-equation-box">
+      <div class="pixel-math-equation" id="mathPopupEquation">C = ...</div>
+      <div class="pixel-math-eval" id="mathPopupEvaluation"></div>
+    </div>
+  </div>
+
+  <script type="module" src="simulation.js"></script>
+</body>
+</html>

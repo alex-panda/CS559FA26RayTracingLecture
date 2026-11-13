@@ -1,0 +1,84 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Ray Tracing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="shortcut icon" href="favicon.ico">
+
+  <link rel="stylesheet" href="../reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../reveal.js/dist/theme/black.css">
+  <link rel="stylesheet" href="../reveal.js/dist/plugin/highlight/monokai.css">
+
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+
+<body>
+
+<div class="reveal">
+  <div class="slides">
+
+    <!--
+        Import Markdown Slides
+         - "---" is horizontal slides
+         - "--" is vertical slides
+    -->
+    <section
+        data-markdown="./slides.md"
+        data-separator="^\r?\n---\r?\n$"
+        data-separator-vertical="^\r?\n--\r?\n$"
+    ></section>
+
+  </div>
+</div>
+
+<script src="../reveal.js/dist/reveal.js"></script>
+<script src="../reveal.js/dist/plugin/markdown.js"></script>
+<script src="../reveal.js/dist/plugin/highlight.js"></script>
+<script src="../reveal.js/dist/plugin/notes.js"></script>
+<script src="../reveal.js/dist/plugin/math.js"></script>
+<script src="../reveal.js/dist/plugin/search.js"></script>
+<script src="../reveal.js/dist/plugin/zoom.js"></script>
+<script type="module" defer>
+    import * as slide_iframe_pool from './js/slide_iframe_pool.js';
+
+    Reveal.on('ready', event => {
+        slide_iframe_pool.onRevealReady(Reveal, event);
+    });
+
+    Reveal.initialize({
+        controls: true,
+        progress: true,
+        slideNumber: (slide) => {
+            const h = (Reveal.getIndices(slide).h ?? 0) + 1;
+            const v = (Reveal.getIndices(slide).v ?? 0) + 1;
+            const t = Reveal.getTotalSlides(); // (horizontal + vertical)
+            const th = Reveal.getHorizontalSlides().length; // just number of horizontal slides
+            let out = `${h}.${v}/${th}`;
+            if (v <= 1) { out = `${h}/${th}` }
+            return [out];
+        },
+        hash: true,
+
+        transition: 'slide',
+
+        width: 1280,
+        height: 720,
+
+        margin: 0,
+        center: false,
+        display: 'flex',
+
+        katex: {
+        output: 'html'
+        },
+
+        plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealSearch, RevealZoom, RevealMath.MathJax3 ],
+    });
+</script>
+
+</body>
+</html>

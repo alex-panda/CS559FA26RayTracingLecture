@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<!--
+  Demo source: https://physicsfundamentalsinfo.com/labs/snells-law-simulator
+-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snell's Law Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #0A1628;
+      --ink-2: #142139;
+      --slot: #0E1A30;
+      --gold: #C8932A;
+      --cream: #FAF6EE;
+      --paper: #F5F2EA;
+      --wine: #7A1F2B;
+      --mist: #C5D0DC;
+      --rule: #D9CFB8;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      background: var(--ink);
+      color: var(--cream);
+      font-family: 'Manrope', system-ui, -apple-system, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+    .lab {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      align-items: start;
+    }
+    .lab-canvas-wrap {
+      position: relative;
+      height: 520px;
+      background: var(--slot);
+      border: 1px solid #1d2c47;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .panel {
+      background: var(--ink-2);
+      border: 1px solid #1d2c47;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .panel h3 {
+      font-size: 11px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--mist);
+      font-weight: 700;
+      margin: 0 0 12px;
+    }
+    .ctrl {
+      margin-bottom: 15px;
+    }
+    .ctrl:last-of-type {
+      margin-bottom: 6px;
+    }
+    .ctrl-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .ctrl-label {
+      font-size: 13px;
+      color: var(--cream);
+      font-weight: 600;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ctrl-val {
+      font-size: 14px;
+      color: var(--gold);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    input[type=range] {
+      width: 100%;
+      margin: 0;
+      accent-color: var(--gold);
+      height: 22px;
+      cursor: pointer;
+      background: transparent;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      margin-top: 10px;
+      padding: 11px 14px;
+      border: none;
+      border-radius: 9px;
+      background: var(--gold);
+      color: var(--ink);
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: .01em;
+      cursor: pointer;
+    }
+    .btn:hover {
+      filter: brightness(1.06);
+    }
+    .btn:focus-visible {
+      outline: 3px solid var(--cream);
+      outline-offset: 2px;
+    }
+    .readouts {
+      margin-top: 16px;
+      display: grid;
+      gap: 9px;
+    }
+    .slot {
+      background: var(--slot);
+      border: 1px solid #1d2c47;
+      border-radius: 9px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .slot .k {
+      font-size: 12px;
+      color: var(--mist);
+      font-weight: 600;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .slot .v {
+      font-size: 16px;
+      color: var(--gold);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+      text-align: right;
+    }
+    .status {
+      margin-top: 12px;
+      border-radius: 9px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border: 1px solid #2a3a57;
+      color: var(--mist);
+      background: var(--slot);
+      line-height: 1.4;
+    }
+    .status.tir {
+      border-color: var(--gold);
+      color: var(--cream);
+      background: linear-gradient(180deg, rgba(200,147,42,.16), rgba(200,147,42,.05));
+    }
+    .status .tir-badge {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: var(--ink);
+      background: var(--gold);
+      padding: 2px 8px;
+      border-radius: 5px;
+      margin-right: 8px;
+    }
+    @media (max-width: 760px) {
+      .lab {
+        grid-template-columns: 1fr;
+      }
+      .lab-canvas-wrap {
+        height: 400px;
+        min-height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- The "lab" div from https://physicsfundamentalsinfo.com/labs/snells-law-simulator -->
+  <div class="lab">
+    <div class="lab-canvas-wrap">
+      <canvas id="cv" aria-label="Animated diagram of a light ray reflecting and refracting at a boundary between two media"></canvas>
+    </div>
+
+    <div class="panel">
+      <h3>Controls</h3>
+
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <span class="ctrl-label">Angle of incidence</span>
+          <span class="ctrl-val" id="vAng">40°</span>
+        </div>
+        <input type="range" id="sAng" min="0" max="89" step="1" value="40" aria-label="Angle of incidence in degrees">
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <span class="ctrl-label">Index n<sub>1</sub> (upper medium)</span>
+          <span class="ctrl-val" id="vN1">1.00</span>
+        </div>
+        <input type="range" id="sN1" min="1.00" max="2.50" step="0.01" value="1.00" aria-label="Refractive index of the upper medium">
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <span class="ctrl-label">Index n<sub>2</sub> (lower medium)</span>
+          <span class="ctrl-val" id="vN2">1.50</span>
+        </div>
+        <input type="range" id="sN2" min="1.00" max="2.50" step="0.01" value="1.50" aria-label="Refractive index of the lower medium">
+      </div>
+
+      <button class="btn" id="btn" type="button" aria-pressed="true">❚❚&nbsp; Pause</button>
+
+      <div class="readouts">
+        <div class="slot"><span class="k">Angle of reflection</span><span class="v" id="rRefl">40.0°</span></div>
+        <div class="slot"><span class="k">Angle of refraction</span><span class="v" id="rRefr">25.4°</span></div>
+        <div class="slot"><span class="k">Critical angle</span><span class="v" id="rCrit">—</span></div>
+      </div>
+
+      <div class="status" id="status">Light bends toward the normal as it enters the denser medium.</div>
+    </div>
+  </div>
+
+  <script>
+    // Demo script source: https://physicsfundamentalsinfo.com/labs/snells-law-simulator
+    (function(){
+      "use strict";
+      var DEG = 180/Math.PI, RAD = Math.PI/180;
+
+      var cv = document.getElementById('cv');
+      var ctx = cv.getContext('2d');
+
+      var sAng = document.getElementById('sAng');
+      var sN1  = document.getElementById('sN1');
+      var sN2  = document.getElementById('sN2');
+      var vAng = document.getElementById('vAng');
+      var vN1  = document.getElementById('vN1');
+      var vN2  = document.getElementById('vN2');
+      var rRefl= document.getElementById('rRefl');
+      var rRefr= document.getElementById('rRefr');
+      var rCrit= document.getElementById('rCrit');
+      var statusEl = document.getElementById('status');
+      var btn  = document.getElementById('btn');
+
+      // ---- state ----
+      var state = { ang:40, n1:1.00, n2:1.50 };
+      var playing = true;
+      var phase = 0;            // 0..1 animation phase
+      var PERIOD = 2.6;         // seconds per cycle
+      var rafId = null;
+      var lastT = null;
+
+      // ---- pure physics (unit-tested) ----
+      function clamp(x, lo, hi){ return x < lo ? lo : (x > hi ? hi : x); }
+
+      function computeAngles(angDeg, n1, n2){
+        var t1 = angDeg * RAD;
+        var sinT1 = Math.sin(t1);
+        var reflDeg = angDeg;                 // law of reflection
+        var sinT2 = (n1 / n2) * sinT1;        // from n1 sinθ1 = n2 sinθ2
+        var tir = false, refrDeg = null;
+        if (sinT2 <= 1 + 1e-9){
+          refrDeg = Math.asin(clamp(sinT2, -1, 1)) * DEG;
+        } else {
+          tir = true;                          // only possible when n1 > n2
+        }
+        var critDeg = null;
+        if (n1 > n2){
+          critDeg = Math.asin(clamp(n2 / n1, -1, 1)) * DEG;
+        }
+        return { reflDeg:reflDeg, refrDeg:refrDeg, critDeg:critDeg, tir:tir };
+      }
+
+      function fmtDeg(x){ return (isFinite(x) ? x.toFixed(1) : '—') + '°'; }
+
+      // ---- readouts ----
+      function updateReadouts(){
+        var r = computeAngles(state.ang, state.n1, state.n2);
+        rRefl.textContent = fmtDeg(r.reflDeg);
+        rRefr.textContent = r.tir ? '— (TIR)' : fmtDeg(r.refrDeg);
+        rCrit.textContent = (r.critDeg == null) ? '—' : fmtDeg(r.critDeg);
+
+        if (r.tir){
+          statusEl.className = 'status tir';
+          statusEl.innerHTML = '<span class="tir-badge">Total internal reflection</span>'
+            + 'The angle exceeds the critical angle of ' + fmtDeg(r.critDeg)
+            + ', so no light escapes — it all reflects back into the denser medium.';
+        } else {
+          statusEl.className = 'status';
+          if (Math.abs(state.n1 - state.n2) < 1e-9){
+            statusEl.textContent = 'The two media share the same index, so the light passes straight through without bending.';
+          } else if (state.n2 > state.n1){
+            statusEl.textContent = 'Light bends toward the normal as it enters the denser (higher-index) medium.';
+          } else {
+            statusEl.textContent = 'Light bends away from the normal as it enters the less dense (lower-index) medium.';
+          }
+        }
+        return r;
+      }
+
+      // ---- drawing ----
+      function lerp(a, b, t){ return { x:a.x + (b.x-a.x)*t, y:a.y + (b.y-a.y)*t }; }
+      function arrowHead(from, to, color, size){
+        var a = Math.atan2(to.y - from.y, to.x - from.x);
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.translate(to.x, to.y);
+        ctx.rotate(a);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-size, -size*0.55);
+        ctx.lineTo(-size, size*0.55);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function ray(from, to, color, width){
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+      }
+
+      function photon(p, color){
+        var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 11);
+        g.addColorStop(0, color);
+        g.addColorStop(1, 'rgba(10,22,40,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 11, 0, 2*Math.PI); ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, 2*Math.PI); ctx.fill();
+      }
+
+      function label(txt, x, y, color, size, align){
+        ctx.fillStyle = color;
+        ctx.font = '600 ' + (size||12) + "px 'Manrope', Arial, sans-serif";
+        ctx.textAlign = align || 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(txt, x, y);
+      }
+
+      function densityAlpha(n){
+        // map n in [1, 2.5] -> alpha [0.03, 0.16]; denser side looks more "solid"
+        return 0.03 + (clamp(n,1,2.5) - 1) / 1.5 * 0.13;
+      }
+
+      function draw(){
+        var W = cv.clientWidth || cv.width;
+        var H = cv.clientHeight || cv.height;
+        ctx.clearRect(0, 0, W, H);
+
+        var cx = W * 0.5, cy = H * 0.5;
+        var O = { x:cx, y:cy };
+
+        // media tints (upper = n1, lower = n2)
+        ctx.fillStyle = 'rgba(197,208,220,' + densityAlpha(state.n1).toFixed(3) + ')';
+        ctx.fillRect(0, 0, W, cy);
+        ctx.fillStyle = 'rgba(197,208,220,' + densityAlpha(state.n2).toFixed(3) + ')';
+        ctx.fillRect(0, cy, W, H - cy);
+
+        // boundary
+        ctx.strokeStyle = 'rgba(217,207,184,0.85)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+
+        // normal (dashed)
+        ctx.save();
+        ctx.setLineDash([6, 6]);
+        ctx.strokeStyle = 'rgba(197,208,220,0.55)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(cx, 8); ctx.lineTo(cx, H - 8); ctx.stroke();
+        ctx.restore();
+
+        var r = computeAngles(state.ang, state.n1, state.n2);
+        var t1 = state.ang * RAD;
+        var L = 0.42 * Math.min(W, H);
+
+        var inc = { x: cx - L*Math.sin(t1), y: cy - L*Math.cos(t1) };   // up-left start
+        var refl= { x: cx + L*Math.sin(t1), y: cy - L*Math.cos(t1) };   // up-right end
+        var refr = null;
+        if (!r.tir && r.refrDeg != null){
+          var t2 = r.refrDeg * RAD;
+          refr = { x: cx + L*Math.sin(t2), y: cy + L*Math.cos(t2) };    // down-right end
+        }
+
+        // incident ray (white light), travels from inc -> O
+        ray(inc, O, '#FAF6EE', 3.4);
+        arrowHead(inc, O, '#FAF6EE', 10);
+
+        // reflected ray (mist); brighter on TIR
+        var reflColor = r.tir ? '#FAF6EE' : '#C5D0DC';
+        ray(O, refl, reflColor, r.tir ? 3.4 : 2.6);
+        arrowHead(O, refl, reflColor, 9);
+
+        // refracted ray (gold = the transmitted result)
+        if (refr){
+          ray(O, refr, '#C8932A', 3.4);
+          arrowHead(O, refr, '#C8932A', 10);
+        }
+
+        // hit point
+        ctx.fillStyle = '#FAF6EE';
+        ctx.beginPath(); ctx.arc(O.x, O.y, 3.4, 0, 2*Math.PI); ctx.fill();
+
+        // labels
+        label('Normal', cx + 7, 18, 'rgba(197,208,220,0.85)', 12);
+        label('n\u2081 = ' + state.n1.toFixed(2), 12, 20, '#FAF6EE', 13);
+        label('(incident medium)', 12, 36, 'rgba(197,208,220,0.8)', 11);
+        label('n\u2082 = ' + state.n2.toFixed(2), 12, H - 14, '#FAF6EE', 13);
+
+        label('Incident', inc.x, inc.y - 8, '#FAF6EE', 12, 'center');
+        if (r.tir){
+          label('Reflected (all light)', refl.x, refl.y - 8, '#FAF6EE', 12, 'center');
+        } else {
+          label('Reflected', refl.x, refl.y - 8, '#C5D0DC', 12, 'center');
+          if (refr) label('Refracted', refr.x, refr.y + 18, '#C8932A', 12, 'center');
+        }
+
+        // animated photon
+        if (phase < 0.5){
+          var f = phase / 0.5;
+          photon(lerp(inc, O, f), '#FAF6EE');
+        } else {
+          var g2 = (phase - 0.5) / 0.5;
+          photon(lerp(O, refl, g2), reflColor);
+          if (refr) photon(lerp(O, refr, g2), '#FFE6B0');
+        }
+      }
+
+      // ---- animation loop ----
+      function frame(ts){
+        if (lastT == null) lastT = ts;
+        var dt = (ts - lastT) / 1000;
+        lastT = ts;
+        if (dt > 0.1) dt = 0.1; // guard against big jumps after tab switch
+        phase = (phase + dt / PERIOD) % 1;
+        draw();
+        rafId = requestAnimationFrame(frame);
+      }
+      function startLoop(){ if (rafId == null){ lastT = null; rafId = requestAnimationFrame(frame); } }
+      function stopLoop(){ if (rafId != null){ cancelAnimationFrame(rafId); rafId = null; } }
+
+      function setPlaying(p){
+        playing = p;
+        btn.setAttribute('aria-pressed', p ? 'true' : 'false');
+        btn.innerHTML = p ? '❚❚&nbsp; Pause' : '▶&nbsp; Play';
+        if (p) startLoop(); else { stopLoop(); draw(); }
+      }
+
+      // ---- canvas sizing (DPR-aware, clamped) ----
+      function resizeCanvas(){
+        var wrap = cv.parentElement;
+        var rect = wrap.getBoundingClientRect();
+        var Wc = ((rect.width) > 0 ? (rect.width) : 320);
+        var Hc = ((rect.height) > 0 ? (rect.height) : 360);
+        var dpr = window.devicePixelRatio || 1;
+        cv.width = Math.round(Wc * dpr);
+        cv.height = Math.round(Hc * dpr);
+        cv.style.width = Wc + 'px';
+        cv.style.height = Hc + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        draw();
+      }
+
+      // ---- events ----
+      function onInput(){
+        state.ang = parseFloat(sAng.value);
+        state.n1  = parseFloat(sN1.value);
+        state.n2  = parseFloat(sN2.value);
+        vAng.textContent = Math.round(state.ang) + '°';
+        vN1.textContent  = state.n1.toFixed(2);
+        vN2.textContent  = state.n2.toFixed(2);
+        updateReadouts();
+        draw();
+      }
+      sAng.addEventListener('input', onInput);
+      sN1.addEventListener('input', onInput);
+      sN2.addEventListener('input', onInput);
+      btn.addEventListener('click', function(){ setPlaying(!playing); });
+
+      window.addEventListener('resize', function(){ resizeCanvas(); });
+      window.addEventListener('load', function(){
+        resizeCanvas();
+        onInput();
+        setTimeout(function(){ resizeCanvas(); }, 400);
+      });
+
+      // initial paint + start (matches button label "Pause")
+      resizeCanvas();
+      updateReadouts();
+      setPlaying(true);
+
+      // expose for testing
+      window.__pf = { computeAngles: computeAngles, state: state };
+    })();
+  </script>
+</body>
+</html>
