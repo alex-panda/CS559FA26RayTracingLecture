@@ -1737,6 +1737,12 @@ If the ray reaches the bounce depth limit before bouncing off into nothingness, 
 
 <iframe class="keepalive" src="demo/montecarlo_raytracer/index.html?scene=diffuse&maxDepth=25&samplesPerPixel=1&aaJitter=false"></iframe>
 
+--
+
+## Monte Carlo Demo: Two Spheres
+
+<img src="images/montecarlo_ratracer/two_spheres.PNG" />
+
 ---
 
 ## Monte Carlo: Noise
@@ -1770,6 +1776,12 @@ Unfortunately, *getting rid of the noise becomes increasingly expensive*. To cut
 ## Monte Carlo Demo: Two Spheres (25 Samples Per Pixel)
 
 <iframe class="keepalive" src="demo/montecarlo_raytracer/index.html?scene=diffuse&maxDepth=25&samplesPerPixel=25&aaJitter=false"></iframe>
+
+--
+
+## Monte Carlo Demo: Two Spheres (25 Samples Per Pixel)
+
+<img src="images/montecarlo_ratracer/two_spheres_25_samples_per_pixel.PNG" />
 
 ---
 
