@@ -436,7 +436,7 @@ With ray tracing we see: Ambient light, Ambient occlusion, Color bleeding, Bette
 
 ---
 
-## Avatar: The Way of Water (Ambient Lighting & Reflections)
+## Avatar: The Way of Water (Subsurface Scattering)
 
 <div class="center-vh">
 <a href="https://james-camerons-avatar.fandom.com/wiki/Avatar:_The_Way_of_Water" target="_blank" style="height: 100%;">
