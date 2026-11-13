@@ -446,7 +446,7 @@ With ray tracing we see: Ambient light, Ambient occlusion, Color bleeding, Bette
 
 ---
 
-## Transformers (Ambient Lighting, Reflections)
+## Transformers (Ambient Lighting & Reflections)
 
 <div class="center-vh">
 <a href="https://www.awn.com/vfxworld/transformers-ratcheting-hard-body-surfaces#:~:text=When%20exec%20producer%20Steven%20Spielberg%20gave%20the,51%20pieces%2C%20the%20movie%20version%20has%2010%2C108." target="_blank" style="height: 100%;">
